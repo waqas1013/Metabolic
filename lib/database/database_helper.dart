@@ -22,8 +22,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -47,9 +48,16 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         weight REAL NOT NULL,
         unit TEXT NOT NULL,
+        reps INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (entryId) REFERENCES workout_entries(id) ON DELETE CASCADE
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE exercise_logs ADD COLUMN reps INTEGER NOT NULL DEFAULT 0');
+    }
   }
 
   Future<int> insertEntry(WorkoutEntry entry, List<ExerciseLog> exercises) async {
@@ -62,6 +70,7 @@ class DatabaseHelper {
         'name': exercise.name,
         'weight': exercise.weight,
         'unit': exercise.unit,
+        'reps': exercise.reps,
       });
     }
 
@@ -113,7 +122,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getWeightProgressionForExercise(String exerciseName) async {
     final db = await database;
     return await db.rawQuery('''
-      SELECT e.date, el.weight, el.unit
+      SELECT e.date, el.weight, el.unit, el.reps
       FROM exercise_logs el
       JOIN workout_entries e ON el.entryId = e.id
       WHERE el.name = ?

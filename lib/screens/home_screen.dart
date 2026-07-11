@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   final List<TextEditingController> _exerciseNameControllers = [];
   final List<TextEditingController> _exerciseWeightControllers = [];
+  final List<TextEditingController> _exerciseRepsControllers = [];
   final List<String> _exerciseUnits = [];
 
   bool _isSaving = false;
@@ -55,6 +56,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     for (final c in _exerciseWeightControllers) {
       c.dispose();
     }
+    for (final c in _exerciseRepsControllers) {
+      c.dispose();
+    }
     _saveAnimController.dispose();
     super.dispose();
   }
@@ -63,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() {
       _exerciseNameControllers.add(TextEditingController());
       _exerciseWeightControllers.add(TextEditingController());
+      _exerciseRepsControllers.add(TextEditingController());
       _exerciseUnits.add('kg');
     });
   }
@@ -71,8 +76,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() {
       _exerciseNameControllers[index].dispose();
       _exerciseWeightControllers[index].dispose();
+      _exerciseRepsControllers[index].dispose();
       _exerciseNameControllers.removeAt(index);
       _exerciseWeightControllers.removeAt(index);
+      _exerciseRepsControllers.removeAt(index);
       _exerciseUnits.removeAt(index);
     });
   }
@@ -121,11 +128,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       for (int i = 0; i < _exerciseNameControllers.length; i++) {
         final name = _exerciseNameControllers[i].text.trim();
         final weightText = _exerciseWeightControllers[i].text.trim();
-        if (name.isNotEmpty && weightText.isNotEmpty) {
+        final repsText = _exerciseRepsControllers[i].text.trim();
+        if (name.isNotEmpty && (weightText.isNotEmpty || repsText.isNotEmpty)) {
           exercises.add(ExerciseLog(
             name: name,
             weight: double.tryParse(weightText) ?? 0,
             unit: _exerciseUnits[i],
+            reps: int.tryParse(repsText) ?? 0,
           ));
         }
       }
@@ -177,8 +186,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       for (final c in _exerciseWeightControllers) {
         c.dispose();
       }
+      for (final c in _exerciseRepsControllers) {
+        c.dispose();
+      }
       _exerciseNameControllers.clear();
       _exerciseWeightControllers.clear();
+      _exerciseRepsControllers.clear();
       _exerciseUnits.clear();
       _addExercise();
     });
@@ -382,6 +395,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     index: i,
                     nameController: _exerciseNameControllers[i],
                     weightController: _exerciseWeightControllers[i],
+                    repsController: _exerciseRepsControllers[i],
                     unit: _exerciseUnits[i],
                     onUnitChanged: (u) => setState(() => _exerciseUnits[i] = u),
                     onRemove: () => _removeExercise(i),

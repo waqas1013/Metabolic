@@ -68,6 +68,7 @@ class ExerciseLog {
   final String name;
   final double weight;
   final String unit;
+  final int reps;
 
   const ExerciseLog({
     this.id,
@@ -75,6 +76,7 @@ class ExerciseLog {
     required this.name,
     required this.weight,
     required this.unit,
+    required this.reps,
   });
 
   Map<String, dynamic> toMap() {
@@ -84,6 +86,7 @@ class ExerciseLog {
       'name': name,
       'weight': weight,
       'unit': unit,
+      'reps': reps,
     };
   }
 
@@ -94,6 +97,7 @@ class ExerciseLog {
       name: map['name'] as String,
       weight: (map['weight'] as num).toDouble(),
       unit: map['unit'] as String,
+      reps: (map['reps'] as int? ?? 0),
     );
   }
 }

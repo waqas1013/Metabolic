@@ -20,6 +20,7 @@ class TrendsScreenState extends State<TrendsScreen> {
   String? _selectedExercise;
   List<Map<String, dynamic>> _weightData = [];
   bool _isLoading = true;
+  bool _showReps = false;
 
   final _ranges = ['1W', '1M', '3M', '6M', 'All'];
 
@@ -350,19 +351,26 @@ class TrendsScreenState extends State<TrendsScreen> {
 
   Widget _buildWeightChart() {
     if (_weightData.length < 2) {
-      return _buildEmptyChart('Log more exercises to see weight progression');
+      return _buildEmptyChart('Log more exercises to see progression');
     }
 
     final firstDate = DateTime.parse(_weightData.first['date'] as String);
     final spots = _weightData.asMap().entries.map((e) {
       final date = DateTime.parse(e.value['date'] as String);
       final daysDiff = date.difference(firstDate).inDays.toDouble();
-      return FlSpot(daysDiff, (e.value['weight'] as num).toDouble());
+      final val = _showReps
+          ? (e.value['reps'] as num? ?? 0).toDouble()
+          : (e.value['weight'] as num? ?? 0).toDouble();
+      return FlSpot(daysDiff, val);
     }).toList();
 
-    final maxWeight = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-    final minWeight = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
-    final range = (maxWeight - minWeight).clamp(10, double.infinity);
+    if (spots.isEmpty) {
+      return _buildEmptyChart('No progression data');
+    }
+
+    final maxVal = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+    final minVal = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
+    final range = (maxVal - minVal).clamp(5.0, double.infinity);
 
     return SizedBox(
       height: 180,
@@ -413,8 +421,8 @@ class TrendsScreenState extends State<TrendsScreen> {
             rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
           borderData: FlBorderData(show: false),
-          minY: (minWeight - range * 0.1).floorToDouble(),
-          maxY: (maxWeight + range * 0.1).ceilToDouble(),
+          minY: (minVal - range * 0.1).floorToDouble().clamp(0, double.infinity),
+          maxY: (maxVal + range * 0.1).ceilToDouble(),
           lineBarsData: [
             LineChartBarData(
               spots: spots,
@@ -581,21 +589,45 @@ class TrendsScreenState extends State<TrendsScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Weight progression chart
+                  // Exercise progression chart
                   GlassmorphismCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              '🏋️  Weight Progression',
+                              '📈  Exercise Progression',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
                             ),
+                            if (_exerciseNames.isNotEmpty)
+                              Row(
+                                children: [
+                                  Text(
+                                    'Reps',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: _showReps ? AppTheme.primary : Colors.white54,
+                                      fontWeight: _showReps ? FontWeight.bold : FontWeight.normal,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Switch(
+                                    value: _showReps,
+                                    activeThumbColor: AppTheme.primary,
+                                    activeTrackColor: AppTheme.primary.withValues(alpha: 0.5),
+                                    onChanged: (v) {
+                                      setState(() => _showReps = v);
+                                      _loadData();
+                                    },
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                         if (_exerciseNames.isNotEmpty) ...[

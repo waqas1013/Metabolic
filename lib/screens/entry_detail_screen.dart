@@ -254,21 +254,43 @@ class EntryDetailScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            Text(
-                              '${ex.weight % 1 == 0 ? ex.weight.toInt() : ex.weight}',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.primary,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              ex.unit,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.white.withValues(alpha: 0.5),
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (ex.weight > 0)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '${ex.weight % 1 == 0 ? ex.weight.toInt() : ex.weight}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        ex.unit,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.white.withValues(alpha: 0.5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                if (ex.reps > 0)
+                                  Text(
+                                    '${ex.reps} rep${ex.reps > 1 ? 's' : ''}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: ex.weight > 0
+                                          ? AppTheme.secondary
+                                          : AppTheme.primary,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
