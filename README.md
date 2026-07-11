@@ -1,6 +1,8 @@
-# Workout Journal Tracker
+# Metabolic
 
-A premium, modern Flutter application built for tracking post-workout metrics, exercises, weights, and physical comfort trends over time. Specially optimized for individuals working toward athletic, calisthenics-focused progress while monitoring back safety.
+A premium, modern Flutter application built for tracking post-workout metrics, exercises, weights/reps, and physical recovery/comfort trends over time. Specially optimized for individuals working toward athletic, calisthenics-focused progress while monitoring back safety.
+
+---
 
 ## 🚀 Key Features
 
@@ -10,14 +12,29 @@ A premium, modern Flutter application built for tracking post-workout metrics, e
   * 🔙 **Back Comfort:** Score from 0 to 10 (0 = no issues, 10 = severe pain).
   * 💪 **Difficulty of the Workout:** Score from 1 to 10.
   * 💡 **One Thing Improved Today:** Free-text field to document wins, form enhancements, or milestones.
-  * 🏋️ **Weight & Exercise Tracking:** Add multiple exercises with exact weight values used and units (kg/lbs).
-* **Workout History:** Scrollable feed of previous sessions with visual score badges, expandable details, and swipe-to-delete.
+  * 🏋️ **Weight & Reps Progression:** Log exact weight values and reps (for calisthenics pullups/pushups). Supports kg/lbs toggle.
+
+* **Multi-Activity Logging:**
+  * 🏋️ **Gym / Strength:** Track custom exercises with weights & reps.
+  * 🚶 **Walk:** Auto-hides exercise lists; input distance (km) and duration (mins).
+  * 🏸 **Badminton:** Track court time duration (mins).
+  * 🏃 **Other:** General active recovery logging with custom distance and duration.
+
+* **Smart Autocomplete Search Library (DB v5):**
+  * Premium dark-themed autocomplete suggestions dropdown that lists options as you type.
+  * Comes pre-seeded with 26 clean exercises (e.g. *Assisted Pull-ups*, *Standard or Incline Push-ups*, *Cable Face Pulls*, *Heavy Farmer's Carries*, etc.).
+  * Grows automatically as you log new workouts.
+
+* **Workout History:** Scrollable feed of previous sessions with visual activity badges (`🚶 Walk`, `🏸 Badminton`, `🏋️ Strength`), expandable statistics, and swipe-to-delete.
+
 * **Smart Trends & Analytics:**
-  * **Overall Metrics Over Time:** Interactive line charts mapping Energy, Enjoyment, Back Comfort, and Difficulty.
+  * **Overall Metrics Over Time:** Interactive line charts mapping Energy, Enjoyment, Back Comfort, and Difficulty. Filterable by activity type (All, Gym, Walk, Badminton).
   * **Back Comfort Warning Zone:** Spot patterns and check if discomfort levels cross the safe threshold (> 5).
-  * **Exercise Progression Tracker:** Select any exercise from a dropdown list to view its weight history chart.
-* **Premium Aesthetics:** Sleek dark mode, frosted glassmorphism elements, vibrant gradients, and responsive visual feedback.
-* **Local-First Privacy:** Powered by SQLite to keep your workout history safe on your device, requiring no external logins or internet connection.
+  * **Exercise Progression Tracker:** Select any exercise from a dropdown list to view its progression chart, with toggles for both Weight and Reps.
+
+* **Premium Aesthetics:** Sleek dark navy theme, frosted glassmorphism elements, vibrant gradients, and responsive visual feedback.
+
+* **Local-First Privacy:** Powered by SQLite (Version 5 Schema) to keep your workout history safe on your device, requiring no external logins or internet connection.
 
 ---
 
@@ -37,7 +54,7 @@ A premium, modern Flutter application built for tracking post-workout metrics, e
 lib/
 ├── main.dart                          # App Entry & Tab Navigation
 ├── database/
-│   └── database_helper.dart           # SQLite Database CRUD Operations
+│   └── database_helper.dart           # SQLite Database CRUD & Migration Upgrades
 ├── models/
 │   └── workout_entry.dart             # Dart models for WorkoutEntry & ExerciseLog
 ├── theme/
@@ -45,13 +62,13 @@ lib/
 ├── widgets/
 │   ├── glassmorphism_card.dart        # Reusable blurred card
 │   ├── metric_slider.dart             # Parameter-specific slider with emoji indicators
-│   ├── exercise_input_card.dart       # List row for naming exercises & entering weights
+│   ├── exercise_input_card.dart       # List row for naming exercises, weights, and reps
 │   └── score_badge.dart               # Circular score summary card
 └── screens/
-    ├── home_screen.dart               # Log Workout entry form
-    ├── history_screen.dart            # Scrollable history feed
-    ├── trends_screen.dart             # FL Charts visualization dashboard
-    └── entry_detail_screen.dart       # Expanded session detail view
+    ├── home_screen.dart               # Log Workout entry form (Gym/Walk/Badminton)
+    ├── history_screen.dart            # Scrollable history feed with activity badges
+    ├── trends_screen.dart             # FL Charts visualization dashboard with filters
+    └── entry_detail_screen.dart       # Expanded session detail statistics view
 ```
 
 ---
@@ -75,18 +92,17 @@ lib/
    flutter pub get
    ```
 
-3. Launch on a connected device/emulator:
+3. Launch on a connected device/emulator in debug mode:
    ```bash
    flutter run
    ```
 
-### Builds
+### Deploy to Physical iOS Device
 
-* Build Android APK:
-  ```bash
-  flutter build apk --debug
-  ```
-* Build iOS App (Without signing):
-  ```bash
-  flutter build ios --no-codesign
-  ```
+To deploy the app in **Release Mode** so that it can be launched directly from your iPhone home screen at any time:
+
+1. Connect your iPhone via USB.
+2. Run the release deploy command:
+   ```bash
+   flutter run --release
+   ```
