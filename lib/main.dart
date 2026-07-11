@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:workout_journal/theme/app_theme.dart';
-import 'package:workout_journal/screens/home_screen.dart';
-import 'package:workout_journal/screens/history_screen.dart';
-import 'package:workout_journal/screens/trends_screen.dart';
+import 'package:metabolic/theme/app_theme.dart';
+import 'package:metabolic/screens/home_screen.dart';
+import 'package:metabolic/screens/history_screen.dart';
+import 'package:metabolic/screens/trends_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const WorkoutJournalApp());
+  runApp(const MetabolicApp());
 }
 
-class WorkoutJournalApp extends StatelessWidget {
-  const WorkoutJournalApp({super.key});
+class MetabolicApp extends StatelessWidget {
+  const MetabolicApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Workout Journal',
+      title: 'Metabolic',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: const MainNavigation(),

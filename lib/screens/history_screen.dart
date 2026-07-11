@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:workout_journal/database/database_helper.dart';
-import 'package:workout_journal/models/workout_entry.dart';
-import 'package:workout_journal/theme/app_theme.dart';
-import 'package:workout_journal/widgets/glassmorphism_card.dart';
-import 'package:workout_journal/widgets/score_badge.dart';
-import 'package:workout_journal/screens/entry_detail_screen.dart';
+import 'package:metabolic/database/database_helper.dart';
+import 'package:metabolic/models/workout_entry.dart';
+import 'package:metabolic/theme/app_theme.dart';
+import 'package:metabolic/widgets/glassmorphism_card.dart';
+import 'package:metabolic/widgets/score_badge.dart';
+import 'package:metabolic/screens/entry_detail_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});

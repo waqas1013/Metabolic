@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:workout_journal/theme/app_theme.dart';
+import 'package:metabolic/theme/app_theme.dart';
 
 class GlassmorphismCard extends StatelessWidget {
   final Widget child;

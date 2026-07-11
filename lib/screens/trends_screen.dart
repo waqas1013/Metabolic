@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:workout_journal/database/database_helper.dart';
-import 'package:workout_journal/models/workout_entry.dart';
-import 'package:workout_journal/theme/app_theme.dart';
-import 'package:workout_journal/widgets/glassmorphism_card.dart';
+import 'package:metabolic/database/database_helper.dart';
+import 'package:metabolic/models/workout_entry.dart';
+import 'package:metabolic/theme/app_theme.dart';
+import 'package:metabolic/widgets/glassmorphism_card.dart';
 
 class TrendsScreen extends StatefulWidget {
   const TrendsScreen({super.key});

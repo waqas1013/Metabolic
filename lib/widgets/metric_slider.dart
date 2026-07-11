@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:workout_journal/theme/app_theme.dart';
+import 'package:metabolic/theme/app_theme.dart';
 
 class MetricSlider extends StatelessWidget {
   final String label;
