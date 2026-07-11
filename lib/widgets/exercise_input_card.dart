@@ -9,6 +9,7 @@ class ExerciseInputCard extends StatelessWidget {
   final String unit;
   final ValueChanged<String> onUnitChanged;
   final VoidCallback onRemove;
+  final List<String> suggestions;
 
   const ExerciseInputCard({
     super.key,
@@ -19,6 +20,7 @@ class ExerciseInputCard extends StatelessWidget {
     required this.unit,
     required this.onUnitChanged,
     required this.onRemove,
+    required this.suggestions,
   });
 
   @override
@@ -50,16 +52,94 @@ class ExerciseInputCard extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             flex: 3,
-            child: TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'Exercise',
-                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-              ),
+            child: Autocomplete<String>(
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text.isEmpty) {
+                  return const Iterable<String>.empty();
+                }
+                return suggestions.where((String option) {
+                  return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                });
+              },
+              onSelected: (String selection) {
+                nameController.text = selection;
+              },
+              fieldViewBuilder: (BuildContext context, TextEditingController textEditingController, FocusNode focusNode, VoidCallback onFieldSubmitted) {
+                // Sync the controller with the parent nameController
+                if (textEditingController.text != nameController.text) {
+                  textEditingController.text = nameController.text;
+                }
+                textEditingController.addListener(() {
+                  nameController.text = textEditingController.text;
+                });
+                return TextField(
+                  controller: textEditingController,
+                  focusNode: focusNode,
+                  onSubmitted: (_) => onFieldSubmitted(),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Exercise',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                );
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      width: 160,
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final String option = options.elementAt(index);
+                            return InkWell(
+                              onTap: () => onSelected(option),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: index < options.length - 1
+                                          ? Colors.white.withValues(alpha: 0.05)
+                                          : Colors.transparent,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  option,
+                                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(width: 4),

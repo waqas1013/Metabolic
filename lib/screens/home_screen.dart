@@ -36,11 +36,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _isSaving = false;
   late AnimationController _saveAnimController;
   late Animation<double> _saveAnimation;
+  List<String> _exerciseSuggestions = [];
 
   @override
   void initState() {
     super.initState();
     _addExercise(); // start with one exercise row
+    _loadSuggestions();
     _saveAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -49,6 +51,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       parent: _saveAnimController,
       curve: Curves.elasticOut,
     );
+  }
+
+  Future<void> _loadSuggestions() async {
+    final list = await DatabaseHelper().getExerciseLibrary();
+    setState(() {
+      _exerciseSuggestions = list;
+    });
   }
 
   @override
@@ -179,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         );
         _resetForm();
+        _loadSuggestions();
         widget.onEntrySaved?.call();
       }
     } catch (e) {
@@ -592,6 +602,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       unit: _exerciseUnits[i],
                       onUnitChanged: (u) => setState(() => _exerciseUnits[i] = u),
                       onRemove: () => _removeExercise(i),
+                      suggestions: _exerciseSuggestions,
                     );
                   }),
                 ],

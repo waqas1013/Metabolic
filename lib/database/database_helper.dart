@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -55,6 +55,45 @@ class DatabaseHelper {
         FOREIGN KEY (entryId) REFERENCES workout_entries(id) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE exercise_library(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+      )
+    ''');
+
+    final defaultExercises = [
+      'Standard or Incline Push-ups',
+      'Assisted Pull-ups',
+      'Lat Pulldown Machine',
+      'Glute Bridges',
+      'Cable Face Pulls',
+      'Bird-Dog',
+      'Dead Hang',
+      'Incline Dumbbell Press',
+      'Seated Cable Row',
+      'Goblet Squat',
+      'Dumbbell Lateral Raises',
+      'Bicep Curls',
+      'Tricep Pushdowns',
+      'Dumbbell Reverse Lunges',
+      'Heavy Farmer\'s Carries',
+      'Pallof Press',
+      'Pull-ups',
+      'Push-ups',
+      'Squats',
+      'Dips',
+      'Deadlift',
+      'Bench Press',
+      'Overhead Press',
+      'Barbell Row',
+      'Lunge',
+      'Plank'
+    ];
+    for (final name in defaultExercises) {
+      await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
+    }
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -65,6 +104,80 @@ class DatabaseHelper {
       await db.execute("ALTER TABLE workout_entries ADD COLUMN type TEXT NOT NULL DEFAULT 'Gym'");
       await db.execute("ALTER TABLE workout_entries ADD COLUMN distance REAL");
       await db.execute("ALTER TABLE workout_entries ADD COLUMN duration INTEGER");
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS exercise_library(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE
+        )
+      ''');
+      await db.execute('DELETE FROM exercise_library');
+      final defaultExercises = [
+        'Standard or Incline Push-ups',
+        'Assisted Pull-ups',
+        'Lat Pulldown Machine',
+        'Glute Bridges',
+        'Cable Face Pulls',
+        'Bird-Dog',
+        'Dead Hang',
+        'Incline Dumbbell Press',
+        'Seated Cable Row',
+        'Goblet Squat',
+        'Dumbbell Lateral Raises',
+        'Bicep Curls',
+        'Tricep Pushdowns',
+        'Dumbbell Reverse Lunges',
+        'Heavy Farmer\'s Carries',
+        'Pallof Press',
+        'Pull-ups',
+        'Push-ups',
+        'Squats',
+        'Dips',
+        'Deadlift',
+        'Bench Press',
+        'Overhead Press',
+        'Barbell Row',
+        'Lunge',
+        'Plank'
+      ];
+      for (final name in defaultExercises) {
+        await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
+      }
+    }
+    if (oldVersion < 5) {
+      await db.execute('DELETE FROM exercise_library');
+      final defaultExercises = [
+        'Standard or Incline Push-ups',
+        'Assisted Pull-ups',
+        'Lat Pulldown Machine',
+        'Glute Bridges',
+        'Cable Face Pulls',
+        'Bird-Dog',
+        'Dead Hang',
+        'Incline Dumbbell Press',
+        'Seated Cable Row',
+        'Goblet Squat',
+        'Dumbbell Lateral Raises',
+        'Bicep Curls',
+        'Tricep Pushdowns',
+        'Dumbbell Reverse Lunges',
+        'Heavy Farmer\'s Carries',
+        'Pallof Press',
+        'Pull-ups',
+        'Push-ups',
+        'Squats',
+        'Dips',
+        'Deadlift',
+        'Bench Press',
+        'Overhead Press',
+        'Barbell Row',
+        'Lunge',
+        'Plank'
+      ];
+      for (final name in defaultExercises) {
+        await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
+      }
     }
   }
 
@@ -80,6 +193,8 @@ class DatabaseHelper {
         'unit': exercise.unit,
         'reps': exercise.reps,
       });
+      // Automatically add to library if not exists
+      await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [exercise.name]);
     }
 
     return entryId;
@@ -142,6 +257,12 @@ class DatabaseHelper {
     final db = await database;
     await db.delete('exercise_logs', where: 'entryId = ?', whereArgs: [id]);
     return await db.delete('workout_entries', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<String>> getExerciseLibrary() async {
+    final db = await database;
+    final maps = await db.query('exercise_library', orderBy: 'name ASC');
+    return maps.map((m) => m['name'] as String).toList();
   }
 
   Future<void> close() async {
