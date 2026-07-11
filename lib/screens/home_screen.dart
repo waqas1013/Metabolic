@@ -1,0 +1,443 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:workout_journal/database/database_helper.dart';
+import 'package:workout_journal/models/workout_entry.dart';
+import 'package:workout_journal/theme/app_theme.dart';
+import 'package:workout_journal/widgets/metric_slider.dart';
+import 'package:workout_journal/widgets/exercise_input_card.dart';
+import 'package:workout_journal/widgets/glassmorphism_card.dart';
+
+class HomeScreen extends StatefulWidget {
+  final VoidCallback? onEntrySaved;
+
+  const HomeScreen({super.key, this.onEntrySaved});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  DateTime _selectedDate = DateTime.now();
+  int _energy = 5;
+  int _enjoyment = 5;
+  int _backComfort = 0;
+  int _difficulty = 5;
+  final _improvementController = TextEditingController();
+
+  final List<TextEditingController> _exerciseNameControllers = [];
+  final List<TextEditingController> _exerciseWeightControllers = [];
+  final List<String> _exerciseUnits = [];
+
+  bool _isSaving = false;
+  late AnimationController _saveAnimController;
+  late Animation<double> _saveAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _addExercise(); // start with one exercise row
+    _saveAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _saveAnimation = CurvedAnimation(
+      parent: _saveAnimController,
+      curve: Curves.elasticOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _improvementController.dispose();
+    for (final c in _exerciseNameControllers) {
+      c.dispose();
+    }
+    for (final c in _exerciseWeightControllers) {
+      c.dispose();
+    }
+    _saveAnimController.dispose();
+    super.dispose();
+  }
+
+  void _addExercise() {
+    setState(() {
+      _exerciseNameControllers.add(TextEditingController());
+      _exerciseWeightControllers.add(TextEditingController());
+      _exerciseUnits.add('kg');
+    });
+  }
+
+  void _removeExercise(int index) {
+    setState(() {
+      _exerciseNameControllers[index].dispose();
+      _exerciseWeightControllers[index].dispose();
+      _exerciseNameControllers.removeAt(index);
+      _exerciseWeightControllers.removeAt(index);
+      _exerciseUnits.removeAt(index);
+    });
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppTheme.primary,
+              surface: AppTheme.surface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  Future<void> _saveEntry() async {
+    if (_isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final entry = WorkoutEntry(
+        date: _selectedDate,
+        energy: _energy,
+        enjoyment: _enjoyment,
+        backComfort: _backComfort,
+        difficulty: _difficulty,
+        improvement: _improvementController.text.trim().isEmpty
+            ? 'No notes'
+            : _improvementController.text.trim(),
+      );
+
+      final exercises = <ExerciseLog>[];
+      for (int i = 0; i < _exerciseNameControllers.length; i++) {
+        final name = _exerciseNameControllers[i].text.trim();
+        final weightText = _exerciseWeightControllers[i].text.trim();
+        if (name.isNotEmpty && weightText.isNotEmpty) {
+          exercises.add(ExerciseLog(
+            name: name,
+            weight: double.tryParse(weightText) ?? 0,
+            unit: _exerciseUnits[i],
+          ));
+        }
+      }
+
+      await DatabaseHelper().insertEntry(entry, exercises);
+      _saveAnimController.forward(from: 0);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppTheme.success),
+                const SizedBox(width: 12),
+                const Text('Workout logged! 💪'),
+              ],
+            ),
+            backgroundColor: AppTheme.surface,
+          ),
+        );
+        _resetForm();
+        widget.onEntrySaved?.call();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  void _resetForm() {
+    setState(() {
+      _selectedDate = DateTime.now();
+      _energy = 5;
+      _enjoyment = 5;
+      _backComfort = 0;
+      _difficulty = 5;
+      _improvementController.clear();
+      for (final c in _exerciseNameControllers) {
+        c.dispose();
+      }
+      for (final c in _exerciseWeightControllers) {
+        c.dispose();
+      }
+      _exerciseNameControllers.clear();
+      _exerciseWeightControllers.clear();
+      _exerciseUnits.clear();
+      _addExercise();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 100,
+            floating: true,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.fitness_center, size: 20, color: AppTheme.primary),
+                  SizedBox(width: 8),
+                  Text('Log Workout',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.all(20),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // Date selector
+                GlassmorphismCard(
+                  onTap: _pickDate,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today,
+                          color: AppTheme.primary, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.edit,
+                          color: Colors.white.withValues(alpha: 0.4), size: 18),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Metric sliders
+                MetricSlider(
+                  label: 'Energy Before Workout',
+                  value: _energy,
+                  min: 1,
+                  max: 10,
+                  emoji: '⚡',
+                  activeColor: AppTheme.primary,
+                  onChanged: (v) => setState(() => _energy = v),
+                ),
+                MetricSlider(
+                  label: 'Enjoyment',
+                  value: _enjoyment,
+                  min: 1,
+                  max: 10,
+                  emoji: '😊',
+                  activeColor: AppTheme.secondary,
+                  onChanged: (v) => setState(() => _enjoyment = v),
+                ),
+                MetricSlider(
+                  label: 'Back Comfort',
+                  value: _backComfort,
+                  min: 0,
+                  max: 10,
+                  emoji: '🔙',
+                  invertColors: true,
+                  subtitle: '0 = No issues  •  10 = Severe pain',
+                  activeColor: _backComfort > 5 ? AppTheme.error : AppTheme.success,
+                  onChanged: (v) => setState(() => _backComfort = v),
+                ),
+                MetricSlider(
+                  label: 'Difficulty',
+                  value: _difficulty,
+                  min: 1,
+                  max: 10,
+                  emoji: '💪',
+                  activeColor: AppTheme.warning,
+                  onChanged: (v) => setState(() => _difficulty = v),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Improvement text
+                GlassmorphismCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Text('💡', style: TextStyle(fontSize: 20)),
+                          SizedBox(width: 10),
+                          Text(
+                            'One thing that improved today',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _improvementController,
+                        maxLines: 3,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText:
+                              'e.g., Better form on pull-ups, deeper squats...',
+                          hintStyle:
+                              TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.1)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.1)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: AppTheme.primary),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withValues(alpha: 0.03),
+                          contentPadding: const EdgeInsets.all(14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Exercises section
+                Row(
+                  children: [
+                    const Text('🏋️', style: TextStyle(fontSize: 20)),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Exercises & Weights',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _addExercise,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.add, color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text('Add',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                ...List.generate(_exerciseNameControllers.length, (i) {
+                  return ExerciseInputCard(
+                    index: i,
+                    nameController: _exerciseNameControllers[i],
+                    weightController: _exerciseWeightControllers[i],
+                    unit: _exerciseUnits[i],
+                    onUnitChanged: (u) => setState(() => _exerciseUnits[i] = u),
+                    onRemove: () => _removeExercise(i),
+                  );
+                }),
+
+                const SizedBox(height: 30),
+
+                // Save button
+                ScaleTransition(
+                  scale: Tween(begin: 1.0, end: 1.05).animate(_saveAnimation),
+                  child: GestureDetector(
+                    onTap: _isSaving ? null : _saveEntry,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primary.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                'Save Workout 💾',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
