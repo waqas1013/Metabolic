@@ -15,6 +15,7 @@ class TrendsScreen extends StatefulWidget {
 
 class TrendsScreenState extends State<TrendsScreen> {
   String _selectedRange = 'All';
+  String _selectedTypeFilter = 'All';
   List<WorkoutEntry> _entries = [];
   List<String> _exerciseNames = [];
   String? _selectedExercise;
@@ -23,6 +24,7 @@ class TrendsScreenState extends State<TrendsScreen> {
   bool _showReps = false;
 
   final _ranges = ['1W', '1M', '3M', '6M', 'All'];
+  final _types = ['All', 'Gym', 'Walk', 'Badminton'];
 
   @override
   void initState() {
@@ -63,9 +65,14 @@ class TrendsScreenState extends State<TrendsScreen> {
         break;
     }
 
-    final filtered = cutoff != null
+    var filtered = cutoff != null
         ? entries.where((e) => e.date.isAfter(cutoff!)).toList()
         : entries;
+
+    // Filter by activity type
+    if (_selectedTypeFilter != 'All') {
+      filtered = filtered.where((e) => e.type == _selectedTypeFilter).toList();
+    }
 
     List<Map<String, dynamic>> weightData = [];
     final exercise = _selectedExercise ?? (names.isNotEmpty ? names.first : null);
@@ -493,38 +500,99 @@ class TrendsScreenState extends State<TrendsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Time range selector
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: _ranges.map((range) {
-                        final selected = range == _selectedRange;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(range),
-                            selected: selected,
-                            selectedColor: AppTheme.primary,
-                            backgroundColor: AppTheme.surface,
-                            labelStyle: TextStyle(
-                              color: selected ? Colors.white : Colors.white54,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: BorderSide.none,
-                            onSelected: (_) {
-                              setState(() => _selectedRange = range);
-                              _loadData();
-                            },
+                  Row(
+                    children: [
+                      const Text(
+                        'Range:  ',
+                        style: TextStyle(fontSize: 12, color: Colors.white54, fontWeight: FontWeight.bold),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _ranges.map((range) {
+                              final selected = range == _selectedRange;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ChoiceChip(
+                                  label: Text(range),
+                                  selected: selected,
+                                  selectedColor: AppTheme.primary,
+                                  backgroundColor: AppTheme.surface,
+                                  labelStyle: TextStyle(
+                                    color: selected ? Colors.white : Colors.white54,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  side: BorderSide.none,
+                                  onSelected: (_) {
+                                    setState(() => _selectedRange = range);
+                                    _loadData();
+                                  },
+                                ),
+                              );
+                            }).toList(),
                           ),
-                        );
-                      }).toList(),
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
+
+                  // Activity type selector
+                  Row(
+                    children: [
+                      const Text(
+                        'Activity: ',
+                        style: TextStyle(fontSize: 12, color: Colors.white54, fontWeight: FontWeight.bold),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _types.map((type) {
+                              final selected = type == _selectedTypeFilter;
+                              final display = type == 'Gym'
+                                  ? '🏋️ Gym'
+                                  : type == 'Walk'
+                                      ? '🚶 Walk'
+                                      : type == 'Badminton'
+                                          ? '🏸 Badminton'
+                                          : 'All';
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ChoiceChip(
+                                  label: Text(display),
+                                  selected: selected,
+                                  selectedColor: AppTheme.secondary,
+                                  backgroundColor: AppTheme.surface,
+                                  labelStyle: TextStyle(
+                                    color: selected ? Colors.white : Colors.white54,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  side: BorderSide.none,
+                                  onSelected: (_) {
+                                    setState(() => _selectedTypeFilter = type);
+                                    _loadData();
+                                  },
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
 
                   // Metrics chart
                   GlassmorphismCard(

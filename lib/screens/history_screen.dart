@@ -169,15 +169,21 @@ class HistoryScreenState extends State<HistoryScreen> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   gradient: AppTheme.primaryGradient,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  DateFormat('EEE').format(entry.date),
+                                  entry.type == 'Walk'
+                                      ? '🚶 Walk'
+                                      : entry.type == 'Badminton'
+                                          ? '🏸 Badminton'
+                                          : entry.type == 'Other'
+                                              ? '🏃 Cardio'
+                                              : '🏋️ Strength',
                                   style: const TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
                                   ),
@@ -254,13 +260,57 @@ class HistoryScreenState extends State<HistoryScreen> {
                               ],
                             ),
 
-                          // Exercise count
-                          if (exercises.isNotEmpty) ...[
+                          // Activity details summary
+                          if (entry.type == 'Walk') ...[
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                const Text('🏋️',
-                                    style: TextStyle(fontSize: 14)),
+                                const Text('🚶', style: TextStyle(fontSize: 14)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${entry.distance ?? 0.0} km  •  ${entry.duration ?? 0} mins',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (entry.type == 'Badminton') ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Text('🏸', style: TextStyle(fontSize: 14)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${entry.duration ?? 0} mins',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (entry.type == 'Other') ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Text('🏃', style: TextStyle(fontSize: 14)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${entry.distance != null ? '${entry.distance} km  •  ' : ''}${entry.duration ?? 0} mins',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (exercises.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Text('🏋️', style: TextStyle(fontSize: 14)),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${exercises.length} exercise${exercises.length > 1 ? 's' : ''}',

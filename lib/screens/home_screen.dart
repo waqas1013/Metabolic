@@ -24,6 +24,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _difficulty = 5;
   final _improvementController = TextEditingController();
 
+  String _selectedType = 'Gym';
+  final _distanceController = TextEditingController(text: '10.0');
+  final _durationController = TextEditingController(text: '60');
+
   final List<TextEditingController> _exerciseNameControllers = [];
   final List<TextEditingController> _exerciseWeightControllers = [];
   final List<TextEditingController> _exerciseRepsControllers = [];
@@ -50,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _improvementController.dispose();
+    _distanceController.dispose();
+    _durationController.dispose();
     for (final c in _exerciseNameControllers) {
       c.dispose();
     }
@@ -113,6 +119,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() => _isSaving = true);
 
     try {
+      double? distance;
+      int? duration;
+      final exercises = <ExerciseLog>[];
+
+      if (_selectedType == 'Walk') {
+        distance = double.tryParse(_distanceController.text) ?? 10.0;
+        duration = int.tryParse(_durationController.text) ?? 60;
+      } else if (_selectedType == 'Badminton') {
+        duration = int.tryParse(_durationController.text) ?? 60;
+      } else if (_selectedType == 'Other') {
+        distance = double.tryParse(_distanceController.text);
+        duration = int.tryParse(_durationController.text);
+      } else {
+        // Gym/Calisthenics
+        for (int i = 0; i < _exerciseNameControllers.length; i++) {
+          final name = _exerciseNameControllers[i].text.trim();
+          final weightText = _exerciseWeightControllers[i].text.trim();
+          final repsText = _exerciseRepsControllers[i].text.trim();
+          if (name.isNotEmpty && (weightText.isNotEmpty || repsText.isNotEmpty)) {
+            exercises.add(ExerciseLog(
+              name: name,
+              weight: double.tryParse(weightText) ?? 0,
+              unit: _exerciseUnits[i],
+              reps: int.tryParse(repsText) ?? 0,
+            ));
+          }
+        }
+      }
+
       final entry = WorkoutEntry(
         date: _selectedDate,
         energy: _energy,
@@ -122,22 +157,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         improvement: _improvementController.text.trim().isEmpty
             ? 'No notes'
             : _improvementController.text.trim(),
+        type: _selectedType,
+        distance: distance,
+        duration: duration,
       );
-
-      final exercises = <ExerciseLog>[];
-      for (int i = 0; i < _exerciseNameControllers.length; i++) {
-        final name = _exerciseNameControllers[i].text.trim();
-        final weightText = _exerciseWeightControllers[i].text.trim();
-        final repsText = _exerciseRepsControllers[i].text.trim();
-        if (name.isNotEmpty && (weightText.isNotEmpty || repsText.isNotEmpty)) {
-          exercises.add(ExerciseLog(
-            name: name,
-            weight: double.tryParse(weightText) ?? 0,
-            unit: _exerciseUnits[i],
-            reps: int.tryParse(repsText) ?? 0,
-          ));
-        }
-      }
 
       await DatabaseHelper().insertEntry(entry, exercises);
       _saveAnimController.forward(from: 0);
@@ -149,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 const Icon(Icons.check_circle, color: AppTheme.success),
                 const SizedBox(width: 12),
-                const Text('Workout logged! 💪'),
+                Text('Workout logged! ${_selectedType == 'Walk' ? '🚶' : _selectedType == 'Badminton' ? '🏸' : '💪'}'),
               ],
             ),
             backgroundColor: AppTheme.surface,
@@ -179,6 +202,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _enjoyment = 5;
       _backComfort = 0;
       _difficulty = 5;
+      _selectedType = 'Gym';
+      _distanceController.text = '10.0';
+      _durationController.text = '60';
       _improvementController.clear();
       for (final c in _exerciseNameControllers) {
         c.dispose();
@@ -195,6 +221,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _exerciseUnits.clear();
       _addExercise();
     });
+  }
+
+  Widget _buildTypeChip(String type, String emoji) {
+    final selected = _selectedType == type;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedType = type),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: selected ? AppTheme.primaryGradient : null,
+          color: selected ? null : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppTheme.primary : Colors.white.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 4),
+            Text(
+              type,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                color: selected ? Colors.white : Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -250,7 +311,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
+
+                // Activity Type selector
+                GlassmorphismCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Activity Type',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.start,
+                        children: [
+                          _buildTypeChip('Gym', '🏋️'),
+                          _buildTypeChip('Walk', '🚶'),
+                          _buildTypeChip('Badminton', '🏸'),
+                          _buildTypeChip('Other', '🏃'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
 
                 // Metric sliders
                 MetricSlider(
@@ -348,60 +440,161 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
 
                 const SizedBox(height: 20),
-
-                // Exercises section
-                Row(
-                  children: [
-                    const Text('🏋️', style: TextStyle(fontSize: 20)),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Exercises & Weights',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: _addExercise,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.add, color: Colors.white, size: 16),
-                            SizedBox(width: 4),
-                            Text('Add',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13)),
+                 if (_selectedType == 'Walk' || _selectedType == 'Badminton' || _selectedType == 'Other') ...[
+                  GlassmorphismCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              _selectedType == 'Walk'
+                                  ? '🚶 Walk Details'
+                                  : _selectedType == 'Badminton'
+                                      ? '🏸 Badminton Details'
+                                      : '🏃 Activity Details',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            if (_selectedType == 'Walk' || _selectedType == 'Other') ...[
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Distance (km)',
+                                      style: TextStyle(
+                                          fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w500),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      controller: _distanceController,
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(decimal: true),
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.white.withValues(alpha: 0.04),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: const BorderSide(color: AppTheme.primary),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                            ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Duration (mins)',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.white70, fontWeight: FontWeight.w500),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _durationController,
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.white.withValues(alpha: 0.04),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        borderSide: const BorderSide(color: AppTheme.primary),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                ...List.generate(_exerciseNameControllers.length, (i) {
-                  return ExerciseInputCard(
-                    index: i,
-                    nameController: _exerciseNameControllers[i],
-                    weightController: _exerciseWeightControllers[i],
-                    repsController: _exerciseRepsControllers[i],
-                    unit: _exerciseUnits[i],
-                    onUnitChanged: (u) => setState(() => _exerciseUnits[i] = u),
-                    onRemove: () => _removeExercise(i),
-                  );
-                }),
-
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      const Text('🏋️', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Exercises & Weights',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: _addExercise,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.add, color: Colors.white, size: 16),
+                              SizedBox(width: 4),
+                              Text('Add',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...List.generate(_exerciseNameControllers.length, (i) {
+                    return ExerciseInputCard(
+                      index: i,
+                      nameController: _exerciseNameControllers[i],
+                      weightController: _exerciseWeightControllers[i],
+                      repsController: _exerciseRepsControllers[i],
+                      unit: _exerciseUnits[i],
+                      onUnitChanged: (u) => setState(() => _exerciseUnits[i] = u),
+                      onRemove: () => _removeExercise(i),
+                    );
+                  }),
+                ],
                 const SizedBox(height: 30),
 
                 // Save button

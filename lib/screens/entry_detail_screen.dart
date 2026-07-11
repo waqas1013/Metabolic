@@ -190,8 +190,74 @@ class EntryDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // Exercises card
-            if (exercises.isNotEmpty)
+            // Activity / Exercises details card
+            if (entry.type == 'Walk' || entry.type == 'Badminton' || entry.type == 'Other')
+              GlassmorphismCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          entry.type == 'Walk'
+                              ? '🚶 Walk Details'
+                              : entry.type == 'Badminton'
+                                  ? '🏸 Badminton Details'
+                                  : '🏃 Activity Details',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        if (entry.distance != null)
+                          Column(
+                            children: [
+                              const Text(
+                                'Distance',
+                                style: TextStyle(fontSize: 12, color: Colors.white54),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${entry.distance} km',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (entry.duration != null)
+                          Column(
+                            children: [
+                              const Text(
+                                'Duration',
+                                style: TextStyle(fontSize: 12, color: Colors.white54),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${entry.duration} mins',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              )
+            else if (exercises.isNotEmpty)
               GlassmorphismCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

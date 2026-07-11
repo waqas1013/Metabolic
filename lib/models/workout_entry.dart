@@ -6,6 +6,9 @@ class WorkoutEntry {
   final int backComfort;
   final int difficulty;
   final String improvement;
+  final String type; // 'Gym', 'Walk', 'Badminton', 'Other'
+  final double? distance; // in km
+  final int? duration; // in minutes
 
   const WorkoutEntry({
     this.id,
@@ -15,6 +18,9 @@ class WorkoutEntry {
     required this.backComfort,
     required this.difficulty,
     required this.improvement,
+    this.type = 'Gym',
+    this.distance,
+    this.duration,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +32,9 @@ class WorkoutEntry {
       'backComfort': backComfort,
       'difficulty': difficulty,
       'improvement': improvement,
+      'type': type,
+      'distance': distance,
+      'duration': duration,
     };
   }
 
@@ -38,6 +47,9 @@ class WorkoutEntry {
       backComfort: map['backComfort'] as int,
       difficulty: map['difficulty'] as int,
       improvement: map['improvement'] as String,
+      type: map['type'] as String? ?? 'Gym',
+      distance: (map['distance'] as num?)?.toDouble(),
+      duration: map['duration'] as int?,
     );
   }
 
@@ -49,6 +61,9 @@ class WorkoutEntry {
     int? backComfort,
     int? difficulty,
     String? improvement,
+    String? type,
+    double? distance,
+    int? duration,
   }) {
     return WorkoutEntry(
       id: id ?? this.id,
@@ -58,6 +73,9 @@ class WorkoutEntry {
       backComfort: backComfort ?? this.backComfort,
       difficulty: difficulty ?? this.difficulty,
       improvement: improvement ?? this.improvement,
+      type: type ?? this.type,
+      distance: distance ?? this.distance,
+      duration: duration ?? this.duration,
     );
   }
 }
