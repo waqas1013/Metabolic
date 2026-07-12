@@ -20,10 +20,15 @@ A premium, modern Flutter application built for tracking post-workout metrics, e
   * 🏸 **Badminton:** Track court time duration (mins).
   * 🏃 **Other:** General active recovery logging with custom distance and duration.
 
-* **Smart Autocomplete Search Library (DB v5):**
+* **Smart Autocomplete Search Library:**
   * Premium dark-themed autocomplete suggestions dropdown that lists options as you type.
   * Comes pre-seeded with 26 clean exercises (e.g. *Assisted Pull-ups*, *Standard or Incline Push-ups*, *Cable Face Pulls*, *Heavy Farmer's Carries*, etc.).
   * Grows automatically as you log new workouts.
+
+* **Seamless Firebase Cloud Sync:**
+  * **Email & Password Authentication:** Create an account or sign in to secure your workout history.
+  * **Automatic Background Sync:** Workouts and custom exercise suggestions sync automatically between local SQLite and Cloud Firestore.
+  * **Multi-Device Support:** Log in on any device to immediately pull down your complete synced workout logs.
 
 * **Workout History:** Scrollable feed of previous sessions with visual activity badges (`🚶 Walk`, `🏸 Badminton`, `🏋️ Strength`), expandable statistics, and swipe-to-delete.
 
@@ -34,14 +39,13 @@ A premium, modern Flutter application built for tracking post-workout metrics, e
 
 * **Premium Aesthetics:** Sleek dark navy theme, frosted glassmorphism elements, vibrant gradients, and responsive visual feedback.
 
-* **Local-First Privacy:** Powered by SQLite (Version 5 Schema) to keep your workout history safe on your device, requiring no external logins or internet connection.
-
 ---
 
 ## 🛠️ Tech Stack & Dependencies
 
 * **Frontend:** Flutter & Dart
-* **Database:** SQLite (via `sqflite` + `path`)
+* **Local Database:** SQLite (via `sqflite` + `path`)
+* **Cloud Backend:** Cloud Firestore & Firebase Auth (via `firebase_core` & `firebase_auth`)
 * **Data Visualization:** `fl_chart`
 * **Typography:** `google_fonts` (Inter)
 * **Date Formats:** `intl`
@@ -52,9 +56,11 @@ A premium, modern Flutter application built for tracking post-workout metrics, e
 
 ```
 lib/
-├── main.dart                          # App Entry & Tab Navigation
+├── main.dart                          # App Entry, reactive StreamBuilder authentication routing
+├── firebase_options.dart              # Firebase configuration credentials
 ├── database/
-│   └── database_helper.dart           # SQLite Database CRUD & Migration Upgrades
+│   ├── database_helper.dart           # SQLite Database CRUD & Migration Upgrades
+│   └── firebase_helper.dart           # Firebase authentication & Firestore sync handlers
 ├── models/
 │   └── workout_entry.dart             # Dart models for WorkoutEntry & ExerciseLog
 ├── theme/
@@ -65,10 +71,11 @@ lib/
 │   ├── exercise_input_card.dart       # List row for naming exercises, weights, and reps
 │   └── score_badge.dart               # Circular score summary card
 └── screens/
-    ├── home_screen.dart               # Log Workout entry form (Gym/Walk/Badminton)
+    ├── home_screen.dart               # Log Workout entry form + Cloud account settings
     ├── history_screen.dart            # Scrollable history feed with activity badges
     ├── trends_screen.dart             # FL Charts visualization dashboard with filters
-    └── entry_detail_screen.dart       # Expanded session detail statistics view
+    ├── entry_detail_screen.dart       # Expanded session detail statistics view
+    └── login_screen.dart              # Premium Email & Password Sign In / Sign Up form
 ```
 
 ---

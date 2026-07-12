@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:metabolic/database/database_helper.dart';
+import 'package:metabolic/database/firebase_helper.dart';
 import 'package:metabolic/models/workout_entry.dart';
 import 'package:metabolic/theme/app_theme.dart';
 import 'package:metabolic/widgets/glassmorphism_card.dart';
@@ -33,8 +34,13 @@ class HistoryScreenState extends State<HistoryScreen> {
     });
   }
 
-  Future<void> _deleteEntry(int id) async {
-    await DatabaseHelper().deleteEntry(id);
+  Future<void> _deleteEntry(WorkoutEntry entry) async {
+    if (entry.id != null) {
+      await DatabaseHelper().deleteEntry(entry.id!);
+      FirebaseHelper().deleteWorkoutFromCloud(entry.date).catchError((e) {
+        debugPrint("Firebase delete error: $e");
+      });
+    }
     setState(() {
       _loadEntries();
     });
@@ -147,7 +153,7 @@ class HistoryScreenState extends State<HistoryScreen> {
                           color: AppTheme.error, size: 28),
                     ),
                     confirmDismiss: (_) => _confirmDelete(context),
-                    onDismissed: (_) => _deleteEntry(entry.id!),
+                    onDismissed: (_) => _deleteEntry(entry),
                     child: GlassmorphismCard(
                       onTap: () async {
                         final deleted = await Navigator.push<bool>(

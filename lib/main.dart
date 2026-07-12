@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:metabolic/firebase_options.dart';
 import 'package:metabolic/theme/app_theme.dart';
 import 'package:metabolic/screens/home_screen.dart';
 import 'package:metabolic/screens/history_screen.dart';
 import 'package:metabolic/screens/trends_screen.dart';
+import 'package:metabolic/screens/login_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MetabolicApp());
 }
 
@@ -18,7 +25,31 @@ class MetabolicApp extends StatelessWidget {
       title: 'Metabolic',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const MainNavigation(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          // Still loading auth state
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(color: AppTheme.primary),
+              ),
+            );
+          }
+
+          // User is signed in → show main app
+          if (snapshot.hasData) {
+            return const MainNavigation();
+          }
+
+          // User is not signed in → show login
+          return LoginScreen(
+            onLoginSuccess: () {
+              // StreamBuilder will automatically rebuild when auth state changes
+            },
+          );
+        },
+      ),
     );
   }
 }

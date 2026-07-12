@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "899082501797",
+    "project_id": "metabolic-waqas",
+    "storage_bucket": "metabolic-waqas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:899082501797:android:2d958961d299e4cb1d974c",
+        "android_client_info": {
+          "package_name": "com.waqas.workout_journal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDenrszze5ggoYcNMWK0DXPsK_VQ9ymN8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

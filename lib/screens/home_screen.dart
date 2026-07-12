@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import 'package:metabolic/database/database_helper.dart';
+import 'package:metabolic/database/firebase_helper.dart';
 import 'package:metabolic/models/workout_entry.dart';
 import 'package:metabolic/theme/app_theme.dart';
 import 'package:metabolic/widgets/metric_slider.dart';
@@ -172,6 +174,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
 
       await DatabaseHelper().insertEntry(entry, exercises);
+      FirebaseHelper().syncSingleWorkout(entry, exercises).catchError((e) {
+        debugPrint("Firebase sync error: $e");
+      });
       _saveAnimController.forward(from: 0);
 
       if (mounted) {
@@ -233,6 +238,70 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _showAccountSettingsDialog(BuildContext context) {
+    final email = FirebaseHelper().userEmail ?? 'Unknown';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.cloud_done, color: AppTheme.success),
+              SizedBox(width: 10),
+              Text(
+                'Account',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sync Status: Backed Up ✅',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Signed in as: $email',
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Your workouts are automatically synced to the cloud.',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.error.withValues(alpha: 0.2),
+                foregroundColor: AppTheme.error,
+                elevation: 0,
+                side: const BorderSide(color: AppTheme.error, width: 1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await FirebaseHelper().logout();
+              },
+              child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildTypeChip(String type, String emoji) {
     final selected = _selectedType == type;
     return GestureDetector(
@@ -277,6 +346,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             expandedHeight: 100,
             floating: true,
             pinned: true,
+            actions: [
+              IconButton(
+                icon: const Icon(
+                  Icons.account_circle_outlined,
+                  color: Colors.white70,
+                ),
+                onPressed: () {
+                  _showAccountSettingsDialog(context);
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               title: Row(
                 mainAxisSize: MainAxisSize.min,

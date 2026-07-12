@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -60,6 +60,13 @@ class DatabaseHelper {
       CREATE TABLE exercise_library(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE app_settings(
+        key TEXT PRIMARY KEY,
+        value TEXT
       )
     ''');
 
@@ -179,6 +186,14 @@ class DatabaseHelper {
         await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
       }
     }
+    if (oldVersion < 6) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS app_settings(
+          key TEXT PRIMARY KEY,
+          value TEXT
+        )
+      ''');
+    }
   }
 
   Future<int> insertEntry(WorkoutEntry entry, List<ExerciseLog> exercises) async {
@@ -263,6 +278,35 @@ class DatabaseHelper {
     final db = await database;
     final maps = await db.query('exercise_library', orderBy: 'name ASC');
     return maps.map((m) => m['name'] as String).toList();
+  }
+
+  Future<bool> hasEntryForDate(DateTime date) async {
+    final db = await database;
+    final maps = await db.query(
+      'workout_entries',
+      where: 'date = ?',
+      whereArgs: [date.toIso8601String()],
+    );
+    return maps.isNotEmpty;
+  }
+
+  Future<void> addExerciseToLibraryFromSync(String name) async {
+    final db = await database;
+    await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
+  }
+
+  Future<void> insertEntryFromSync(WorkoutEntry entry, List<ExerciseLog> exercises) async {
+    final db = await database;
+    final entryId = await db.insert('workout_entries', entry.toMap()..remove('id'));
+    for (final exercise in exercises) {
+      await db.insert('exercise_logs', {
+        'entryId': entryId,
+        'name': exercise.name,
+        'weight': exercise.weight,
+        'unit': exercise.unit,
+        'reps': exercise.reps,
+      });
+    }
   }
 
   Future<void> close() async {
