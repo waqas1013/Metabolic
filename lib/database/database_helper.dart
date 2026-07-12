@@ -268,6 +268,29 @@ class DatabaseHelper {
     ''', [exerciseName]);
   }
 
+  Future<void> updateEntry(WorkoutEntry entry, List<ExerciseLog> exercises) async {
+    final db = await database;
+    await db.update(
+      'workout_entries',
+      entry.toMap()..remove('id'),
+      where: 'id = ?',
+      whereArgs: [entry.id],
+    );
+
+    // Delete old exercises and re-insert updated ones
+    await db.delete('exercise_logs', where: 'entryId = ?', whereArgs: [entry.id]);
+    for (final exercise in exercises) {
+      await db.insert('exercise_logs', {
+        'entryId': entry.id,
+        'name': exercise.name,
+        'weight': exercise.weight,
+        'unit': exercise.unit,
+        'reps': exercise.reps,
+      });
+      await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [exercise.name]);
+    }
+  }
+
   Future<int> deleteEntry(int id) async {
     final db = await database;
     await db.delete('exercise_logs', where: 'entryId = ?', whereArgs: [id]);

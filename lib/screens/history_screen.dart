@@ -156,7 +156,7 @@ class HistoryScreenState extends State<HistoryScreen> {
                     onDismissed: (_) => _deleteEntry(entry),
                     child: GlassmorphismCard(
                       onTap: () async {
-                        final deleted = await Navigator.push<bool>(
+                        final changed = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                             builder: (_) => EntryDetailScreen(
@@ -165,7 +165,7 @@ class HistoryScreenState extends State<HistoryScreen> {
                             ),
                           ),
                         );
-                        if (deleted == true) refresh();
+                        if (changed == true) refresh();
                       },
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

@@ -4,8 +4,9 @@ import 'package:metabolic/database/database_helper.dart';
 import 'package:metabolic/models/workout_entry.dart';
 import 'package:metabolic/theme/app_theme.dart';
 import 'package:metabolic/widgets/glassmorphism_card.dart';
+import 'package:metabolic/screens/edit_workout_screen.dart';
 
-class EntryDetailScreen extends StatelessWidget {
+class EntryDetailScreen extends StatefulWidget {
   final WorkoutEntry entry;
   final List<ExerciseLog> exercises;
 
@@ -14,6 +15,21 @@ class EntryDetailScreen extends StatelessWidget {
     required this.entry,
     required this.exercises,
   });
+
+  @override
+  State<EntryDetailScreen> createState() => _EntryDetailScreenState();
+}
+
+class _EntryDetailScreenState extends State<EntryDetailScreen> {
+  late WorkoutEntry entry;
+  late List<ExerciseLog> exercises;
+
+  @override
+  void initState() {
+    super.initState();
+    entry = widget.entry;
+    exercises = widget.exercises;
+  }
 
   Future<void> _deleteEntry(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -42,6 +58,28 @@ class EntryDetailScreen extends StatelessWidget {
       if (context.mounted) {
         Navigator.pop(context, true);
       }
+    }
+  }
+
+  Future<void> _editEntry(BuildContext context) async {
+    final edited = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditWorkoutScreen(
+          entry: entry,
+          exercises: exercises,
+        ),
+      ),
+    );
+    if (edited == true && context.mounted) {
+      // Reload updated data from database
+      final updatedExercises = await DatabaseHelper().getExercisesForEntry(entry.id!);
+      final allEntries = await DatabaseHelper().getAllEntries();
+      final updatedEntry = allEntries.firstWhere((e) => e.id == entry.id);
+      setState(() {
+        entry = updatedEntry;
+        exercises = updatedExercises;
+      });
     }
   }
 
@@ -108,6 +146,10 @@ class EntryDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(DateFormat('EEEE, MMM d').format(entry.date)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, color: Colors.white70),
+            onPressed: () => _editEntry(context),
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: AppTheme.error),
             onPressed: () => _deleteEntry(context),
