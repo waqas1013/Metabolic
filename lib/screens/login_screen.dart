@@ -99,13 +99,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background
-          Positioned.fill(
-            child: Container(color: AppTheme.background),
-          ),
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            // Background
+            Positioned.fill(
+              child: Container(color: AppTheme.background),
+            ),
           Positioned(
             top: -150,
             right: -100,
@@ -366,6 +368,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         ],
       ),
-    );
+    ),);
   }
 }

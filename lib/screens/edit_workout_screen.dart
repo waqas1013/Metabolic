@@ -225,29 +225,31 @@ class _EditWorkoutScreenState extends State<EditWorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Workout'),
-        actions: [
-          TextButton.icon(
-            onPressed: _isSaving ? null : _saveChanges,
-            icon: _isSaving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  )
-                : const Icon(Icons.check, color: AppTheme.success),
-            label: Text(
-              _isSaving ? 'Saving...' : 'Save',
-              style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold),
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Edit Workout'),
+          actions: [
+            TextButton.icon(
+              onPressed: _isSaving ? null : _saveChanges,
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check, color: AppTheme.success),
+              label: Text(
+                _isSaving ? 'Saving...' : 'Save',
+                style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Activity Type selector
@@ -530,6 +532,6 @@ class _EditWorkoutScreenState extends State<EditWorkoutScreen> {
           ],
         ),
       ),
-    );
+    ),);
   }
 }
