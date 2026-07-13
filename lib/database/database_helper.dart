@@ -332,9 +332,50 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> clearAllData() async {
+    final db = await database;
+    await db.delete('exercise_logs');
+    await db.delete('workout_entries');
+    await db.delete('exercise_library');
+    await db.delete('app_settings');
+
+    final defaultExercises = [
+      'Standard or Incline Push-ups',
+      'Assisted Pull-ups',
+      'Lat Pulldown Machine',
+      'Glute Bridges',
+      'Cable Face Pulls',
+      'Bird-Dog',
+      'Dead Hang',
+      'Incline Dumbbell Press',
+      'Seated Cable Row',
+      'Goblet Squat',
+      'Dumbbell Lateral Raises',
+      'Bicep Curls',
+      'Tricep Pushdowns',
+      'Dumbbell Reverse Lunges',
+      'Heavy Farmer\'s Carries',
+      'Pallof Press',
+      'Pull-ups',
+      'Push-ups',
+      'Squats',
+      'Dips',
+      'Deadlift',
+      'Bench Press',
+      'Overhead Press',
+      'Barbell Row',
+      'Lunge',
+      'Plank'
+    ];
+    for (final name in defaultExercises) {
+      await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
+    }
+  }
+
   Future<void> close() async {
     final db = await database;
     db.close();
     _database = null;
   }
 }
+

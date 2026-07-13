@@ -5,6 +5,7 @@ import 'package:metabolic/models/workout_entry.dart';
 import 'package:metabolic/theme/app_theme.dart';
 import 'package:metabolic/widgets/glassmorphism_card.dart';
 import 'package:metabolic/screens/edit_workout_screen.dart';
+import 'package:metabolic/database/firebase_helper.dart';
 
 class EntryDetailScreen extends StatefulWidget {
   final WorkoutEntry entry;
@@ -23,6 +24,7 @@ class EntryDetailScreen extends StatefulWidget {
 class _EntryDetailScreenState extends State<EntryDetailScreen> {
   late WorkoutEntry entry;
   late List<ExerciseLog> exercises;
+  bool _hasChanges = false;
 
   @override
   void initState() {
@@ -55,6 +57,9 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
     );
     if (confirmed == true && context.mounted) {
       await DatabaseHelper().deleteEntry(entry.id!);
+      FirebaseHelper().deleteWorkoutFromCloud(entry.date).catchError((e) {
+        debugPrint("Firebase delete error: $e");
+      });
       if (context.mounted) {
         Navigator.pop(context, true);
       }
@@ -79,6 +84,7 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
       setState(() {
         entry = updatedEntry;
         exercises = updatedExercises;
+        _hasChanges = true;
       });
     }
   }
@@ -142,9 +148,19 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(DateFormat('EEEE, MMM d').format(entry.date)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.pop(context, _hasChanges);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context, _hasChanges),
+          ),
+          title: Text(DateFormat('EEEE, MMM d').format(entry.date)),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined, color: Colors.white70),
@@ -412,6 +428,6 @@ class _EntryDetailScreenState extends State<EntryDetailScreen> {
           ],
         ),
       ),
-    );
+    ),);
   }
 }

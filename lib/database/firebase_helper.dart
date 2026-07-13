@@ -213,5 +213,6 @@ class FirebaseHelper {
 
   Future<void> logout() async {
     await _auth.signOut();
+    await DatabaseHelper().clearAllData();
   }
 }
