@@ -30,7 +30,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -113,7 +113,8 @@ class DatabaseHelper {
       'Overhead Press',
       'Barbell Row',
       'Lunge',
-      'Plank'
+      'Plank',
+      'Half-Kneeling Single-Arm Dumbbell Press'
     ];
     for (final name in defaultExercises) {
       await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
@@ -163,7 +164,8 @@ class DatabaseHelper {
         'Overhead Press',
         'Barbell Row',
         'Lunge',
-        'Plank'
+        'Plank',
+        'Half-Kneeling Single-Arm Dumbbell Press'
       ];
       for (final name in defaultExercises) {
         await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
@@ -197,7 +199,8 @@ class DatabaseHelper {
         'Overhead Press',
         'Barbell Row',
         'Lunge',
-        'Plank'
+        'Plank',
+        'Half-Kneeling Single-Arm Dumbbell Press'
       ];
       for (final name in defaultExercises) {
         await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
@@ -220,6 +223,9 @@ class DatabaseHelper {
           note TEXT
         )
       ''');
+    }
+    if (oldVersion < 9) {
+      await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', ['Half-Kneeling Single-Arm Dumbbell Press']);
     }
   }
 
@@ -393,7 +399,8 @@ class DatabaseHelper {
       'Overhead Press',
       'Barbell Row',
       'Lunge',
-      'Plank'
+      'Plank',
+      'Half-Kneeling Single-Arm Dumbbell Press'
     ];
     for (final name in defaultExercises) {
       await db.rawInsert('INSERT OR IGNORE INTO exercise_library(name) VALUES(?)', [name]);
