@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:metabolic/database/database_helper.dart';
 import 'package:metabolic/database/firebase_helper.dart';
 import 'package:metabolic/models/workout_entry.dart';
+import 'package:metabolic/repositories/weight_repository.dart';
 import 'package:metabolic/theme/app_theme.dart';
 import 'package:metabolic/widgets/metric_slider.dart';
 import 'package:metabolic/widgets/exercise_input_card.dart';
@@ -40,11 +41,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _saveAnimation;
   List<String> _exerciseSuggestions = [];
 
+  // Weight tracking
+  final _bodyWeightController = TextEditingController();
+  bool _weightSaved = false;
+
   @override
   void initState() {
     super.initState();
     _addExercise(); // start with one exercise row
     _loadSuggestions();
+    _loadWeightForDate(_selectedDate);
     _saveAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -77,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       c.dispose();
     }
     _saveAnimController.dispose();
+    _bodyWeightController.dispose();
     super.dispose();
   }
 
@@ -121,6 +128,52 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
+      _loadWeightForDate(picked);
+    }
+  }
+
+  Future<void> _loadWeightForDate(DateTime date) async {
+    try {
+      final entry = await WeightRepository().getWeightForDate(date);
+      if (mounted) {
+        setState(() {
+          _weightSaved = entry != null;
+          _bodyWeightController.text = entry != null ? entry.weight.toString() : '';
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading weight: $e');
+    }
+  }
+
+  Future<void> _saveWeight() async {
+    final weightText = _bodyWeightController.text.trim().replaceAll(',', '.');
+    if (weightText.isEmpty) return;
+    final weight = double.tryParse(weightText);
+    if (weight == null || weight <= 0) return;
+
+    try {
+      await WeightRepository().saveWeight(_selectedDate, weight);
+      setState(() => _weightSaved = true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Weight saved!'),
+            backgroundColor: AppTheme.primary,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving weight: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving weight: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -135,12 +188,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final exercises = <ExerciseLog>[];
 
       if (_selectedType == 'Walk') {
-        distance = double.tryParse(_distanceController.text) ?? 10.0;
+        distance = double.tryParse(_distanceController.text.replaceAll(',', '.')) ?? 10.0;
         duration = int.tryParse(_durationController.text) ?? 60;
       } else if (_selectedType == 'Badminton') {
         duration = int.tryParse(_durationController.text) ?? 60;
       } else if (_selectedType == 'Other') {
-        distance = double.tryParse(_distanceController.text);
+        distance = double.tryParse(_distanceController.text.replaceAll(',', '.'));
         duration = int.tryParse(_durationController.text);
       } else {
         // Gym/Calisthenics
@@ -151,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           if (name.isNotEmpty && (weightText.isNotEmpty || repsText.isNotEmpty)) {
             exercises.add(ExerciseLog(
               name: name,
-              weight: double.tryParse(weightText) ?? 0,
+              weight: double.tryParse(weightText.replaceAll(',', '.')) ?? 0,
               unit: _exerciseUnits[i],
               reps: int.tryParse(repsText) ?? 0,
             ));
@@ -236,6 +289,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _exerciseUnits.clear();
       _addExercise();
     });
+    _loadWeightForDate(_selectedDate);
   }
 
   void _showAccountSettingsDialog(BuildContext context) {
@@ -272,8 +326,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Your workouts are automatically synced to the cloud.',
+                'Your workouts and weights are automatically synced to the cloud.',
                 style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context); // Close dialog
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Syncing from cloud...')),
+                    );
+                    try {
+                      await FirebaseHelper().syncFromCloud();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Sync complete!'), backgroundColor: AppTheme.success),
+                        );
+                        _resetForm(); // Reload data on current screen
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Sync failed: $e'), backgroundColor: AppTheme.error),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.sync),
+                  label: const Text('Force Sync Now'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),
@@ -398,6 +484,69 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       const Spacer(),
                       Icon(Icons.edit,
                           color: Colors.white.withValues(alpha: 0.4), size: 18),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Morning Weight card
+                GlassmorphismCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.monitor_weight, color: AppTheme.primary, size: 20),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Weight',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white70),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 80,
+                        child: TextField(
+                          controller: _bodyWeightController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          decoration: InputDecoration(
+                            hintText: 'kg',
+                            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: AppTheme.primary),
+                            ),
+                          ),
+                          onChanged: (_) => setState(() => _weightSaved = false),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('kg', style: TextStyle(color: Colors.white54, fontSize: 14)),
+                      const Spacer(),
+                      SizedBox(
+                        height: 32,
+                        child: ElevatedButton(
+                          onPressed: _weightSaved ? null : _saveWeight,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _weightSaved ? AppTheme.success : AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: Text(
+                            _weightSaved ? '✓' : 'Save',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

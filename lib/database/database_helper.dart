@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:metabolic/models/workout_entry.dart';
+import 'package:metabolic/models/weight_entry.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -10,9 +11,16 @@ class DatabaseHelper {
 
   DatabaseHelper._internal();
 
+  static Future<Database>? _dbInitFuture;
+
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDatabase();
+    if (_dbInitFuture != null) {
+      _database = await _dbInitFuture;
+      return _database!;
+    }
+    _dbInitFuture = _initDatabase();
+    _database = await _dbInitFuture;
     return _database!;
   }
 
@@ -22,7 +30,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -67,6 +75,15 @@ class DatabaseHelper {
       CREATE TABLE app_settings(
         key TEXT PRIMARY KEY,
         value TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE body_weights(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL UNIQUE,
+        weight REAL NOT NULL,
+        note TEXT
       )
     ''');
 
@@ -191,6 +208,16 @@ class DatabaseHelper {
         CREATE TABLE IF NOT EXISTS app_settings(
           key TEXT PRIMARY KEY,
           value TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 8) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS body_weights(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT NOT NULL UNIQUE,
+          weight REAL NOT NULL,
+          note TEXT
         )
       ''');
     }
@@ -338,6 +365,7 @@ class DatabaseHelper {
     await db.delete('workout_entries');
     await db.delete('exercise_library');
     await db.delete('app_settings');
+    await db.delete('body_weights');
 
     final defaultExercises = [
       'Standard or Incline Push-ups',
@@ -372,10 +400,66 @@ class DatabaseHelper {
     }
   }
 
+  // ───────────── Body Weight CRUD ─────────────
+
+  String _dateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> insertOrUpdateWeight(DateTime date, double weight, {String? note}) async {
+    final db = await database;
+    await db.insert(
+      'body_weights',
+      {'date': _dateKey(date), 'weight': weight, 'note': note},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<WeightEntry?> getWeightForDate(DateTime date) async {
+    final db = await database;
+    final maps = await db.query(
+      'body_weights',
+      where: 'date = ?',
+      whereArgs: [_dateKey(date)],
+    );
+    if (maps.isEmpty) return null;
+    return WeightEntry.fromMap(maps.first);
+  }
+
+  Future<List<WeightEntry>> getAllWeights() async {
+    final db = await database;
+    final maps = await db.query('body_weights', orderBy: 'date ASC');
+    return maps.map((m) => WeightEntry.fromMap(m)).toList();
+  }
+
+  Future<List<WeightEntry>> getWeightsInRange(DateTime start, DateTime end) async {
+    final db = await database;
+    final maps = await db.query(
+      'body_weights',
+      where: 'date >= ? AND date <= ?',
+      whereArgs: [_dateKey(start), _dateKey(end)],
+      orderBy: 'date ASC',
+    );
+    return maps.map((m) => WeightEntry.fromMap(m)).toList();
+  }
+
+  Future<void> deleteWeight(DateTime date) async {
+    final db = await database;
+    await db.delete('body_weights', where: 'date = ?', whereArgs: [_dateKey(date)]);
+  }
+
+  Future<void> insertWeightFromSync(WeightEntry entry) async {
+    final db = await database;
+    await db.insert(
+      'body_weights',
+      entry.toMap()..remove('id'),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   Future<void> close() async {
     final db = await database;
     db.close();
     _database = null;
   }
 }
-

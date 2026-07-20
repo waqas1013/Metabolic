@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:metabolic/database/database_helper.dart';
+import 'package:metabolic/repositories/weight_repository.dart';
 import 'package:metabolic/models/workout_entry.dart';
+import 'package:metabolic/models/weight_entry.dart';
 import 'package:metabolic/theme/app_theme.dart';
 import 'package:metabolic/widgets/glassmorphism_card.dart';
 
@@ -16,6 +18,7 @@ class ReportsScreen extends StatefulWidget {
 class ReportsScreenState extends State<ReportsScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _allData = [];
+  List<WeightEntry> _allWeights = [];
   late DateTime _currentWeekStart;
 
   @override
@@ -36,11 +39,24 @@ class ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final data = await DatabaseHelper().getAllEntriesWithExercises();
-    setState(() {
-      _allData = data;
-      _isLoading = false;
-    });
+    try {
+      final data = await DatabaseHelper().getAllEntriesWithExercises();
+      final weights = await WeightRepository().getAllWeights();
+      if (mounted) {
+        setState(() {
+          _allData = data;
+          _allWeights = weights;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading report data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _nextWeek() {
@@ -221,6 +237,86 @@ class ReportsScreenState extends State<ReportsScreen> {
       }
     }
 
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    // --- Weight Tracking Section ---
+    buf.writeln(_generateWeightSection());
+
+    return buf.toString();
+  }
+
+  String _generateWeightSection() {
+    final weekEnd = _currentWeekStart.add(const Duration(days: 6));
+    final prevWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
+    final prevWeekEnd = _currentWeekStart.subtract(const Duration(days: 1));
+
+    final currentWeekWeights = _allWeights.where((w) {
+      final d = DateTime(w.date.year, w.date.month, w.date.day);
+      return !d.isBefore(_currentWeekStart) && !d.isAfter(weekEnd);
+    }).toList();
+
+    final prevWeekWeights = _allWeights.where((w) {
+      final d = DateTime(w.date.year, w.date.month, w.date.day);
+      return !d.isBefore(prevWeekStart) && !d.isAfter(prevWeekEnd);
+    }).toList();
+
+    // Baseline = first ever weight entry
+    final double? baseline = _allWeights.isNotEmpty ? _allWeights.first.weight : null;
+
+    // Map weights by weekday (1=Mon, 7=Sun)
+    final Map<int, double> weightsByDay = {};
+    for (var w in currentWeekWeights) {
+      weightsByDay[w.date.weekday] = w.weight;
+    }
+
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final buf = StringBuffer();
+    buf.writeln('⚖️ WEIGHT TRACKING:');
+    buf.writeln('───────────────────');
+
+    for (int i = 1; i <= 7; i++) {
+      final dayName = days[i - 1];
+      if (weightsByDay.containsKey(i)) {
+        buf.writeln('$dayName: ${weightsByDay[i]!.toStringAsFixed(1)} kg');
+      } else {
+        buf.writeln('$dayName: -');
+      }
+    }
+
+    buf.writeln();
+
+    // Current week average
+    double? currentAvg;
+    if (currentWeekWeights.isNotEmpty) {
+      currentAvg = currentWeekWeights.map((w) => w.weight).reduce((a, b) => a + b) / currentWeekWeights.length;
+      buf.writeln('Weekly Average: ${currentAvg.toStringAsFixed(1)} kg');
+    } else {
+      buf.writeln('Weekly Average: -');
+    }
+
+    // Previous week average
+    double? prevAvg;
+    if (prevWeekWeights.isNotEmpty) {
+      prevAvg = prevWeekWeights.map((w) => w.weight).reduce((a, b) => a + b) / prevWeekWeights.length;
+      buf.writeln('Previous Week Avg: ${prevAvg.toStringAsFixed(1)} kg');
+    } else {
+      buf.writeln('Previous Week Avg: -');
+    }
+
+    // Weekly change
+    if (currentAvg != null && prevAvg != null) {
+      final change = currentAvg - prevAvg;
+      buf.writeln('Weekly Change: ${change > 0 ? '+' : ''}${change.toStringAsFixed(1)} kg');
+    } else {
+      buf.writeln('Weekly Change: -');
+    }
+
+    // Total lost from baseline
+    if (currentAvg != null && baseline != null) {
+      final totalLost = currentAvg - baseline;
+      buf.writeln('Total Weight Lost (from ${baseline.toStringAsFixed(1)} kg): ${totalLost > 0 ? '+' : ''}${totalLost.toStringAsFixed(1)} kg');
+    }
+
     buf.writeln('━━━━━━━━━━━━━━━━━━━━━━━━━');
     return buf.toString();
   }
@@ -233,6 +329,73 @@ class ReportsScreenState extends State<ReportsScreen> {
   }
 
   // ───────────────────────── UI ─────────────────────────
+
+  Widget _buildWeightDashboard() {
+    final weekEnd = _currentWeekStart.add(const Duration(days: 6));
+    final prevWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
+    final prevWeekEnd = _currentWeekStart.subtract(const Duration(days: 1));
+
+    final currentWeekWeights = _allWeights.where((w) {
+      final d = DateTime(w.date.year, w.date.month, w.date.day);
+      return !d.isBefore(_currentWeekStart) && !d.isAfter(weekEnd);
+    }).toList();
+
+    final prevWeekWeights = _allWeights.where((w) {
+      final d = DateTime(w.date.year, w.date.month, w.date.day);
+      return !d.isBefore(prevWeekStart) && !d.isAfter(prevWeekEnd);
+    }).toList();
+
+    final double? baseline = _allWeights.isNotEmpty ? _allWeights.first.weight : null;
+
+    double? currentAvg;
+    if (currentWeekWeights.isNotEmpty) {
+      currentAvg = currentWeekWeights.map((w) => w.weight).reduce((a, b) => a + b) / currentWeekWeights.length;
+    }
+
+    double? prevAvg;
+    if (prevWeekWeights.isNotEmpty) {
+      prevAvg = prevWeekWeights.map((w) => w.weight).reduce((a, b) => a + b) / prevWeekWeights.length;
+    }
+
+    final double? weeklyChange = (currentAvg != null && prevAvg != null) ? currentAvg - prevAvg : null;
+    final double? totalLost = (currentAvg != null && baseline != null) ? currentAvg - baseline : null;
+
+    return GlassmorphismCard(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildMetricColumn(
+            '⚖️ Weekly Average',
+            currentAvg != null ? '${currentAvg.toStringAsFixed(1)} kg' : '-',
+            Colors.white,
+          ),
+          Container(width: 1, height: 36, color: Colors.white.withValues(alpha: 0.1)),
+          _buildMetricColumn(
+            '📉 Total Weight Lost',
+            totalLost != null ? '${totalLost > 0 ? '+' : ''}${totalLost.toStringAsFixed(1)} kg' : '-',
+            totalLost != null && totalLost < 0 ? AppTheme.success : (totalLost != null && totalLost > 0 ? AppTheme.error : Colors.white),
+          ),
+          Container(width: 1, height: 36, color: Colors.white.withValues(alpha: 0.1)),
+          _buildMetricColumn(
+            '📊 Weekly Change',
+            weeklyChange != null ? '${weeklyChange > 0 ? '+' : ''}${weeklyChange.toStringAsFixed(1)} kg' : '-',
+            weeklyChange != null && weeklyChange < 0 ? AppTheme.success : (weeklyChange != null && weeklyChange > 0 ? AppTheme.error : Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricColumn(String label, String value, Color valueColor) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: valueColor)),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -308,6 +471,13 @@ class ReportsScreenState extends State<ReportsScreen> {
               ),
             ),
           ),
+
+          // ── Weight Dashboard ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildWeightDashboard(),
+          ),
+          const SizedBox(height: 8),
 
           // ── Report body ──
           Expanded(

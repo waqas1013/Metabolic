@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:metabolic/database/database_helper.dart';
 import 'package:metabolic/models/workout_entry.dart';
+import 'package:metabolic/models/weight_entry.dart';
 
 class FirebaseHelper {
   static final FirebaseHelper _instance = FirebaseHelper._internal();
@@ -100,6 +101,24 @@ class FirebaseHelper {
         await db.insertEntryFromSync(entry, exercises);
       }
     }
+
+    // 3. Fetch body weights from cloud
+    final weightsSnapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('weights')
+        .get();
+
+    for (final doc in weightsSnapshot.docs) {
+      final data = doc.data();
+      final date = DateTime.parse(doc.id);
+      final entry = WeightEntry(
+        date: date,
+        weight: (data['weight'] as num).toDouble(),
+        note: data['note'] as String?,
+      );
+      await db.insertWeightFromSync(entry);
+    }
   }
 
   /// Push local workouts to Cloud (SQLite -> Firestore)
@@ -148,6 +167,22 @@ class FirebaseHelper {
           'unit': e.unit,
           'reps': e.reps,
         }).toList(),
+        'syncedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // 3. Sync body weights
+    final allWeights = await db.getAllWeights();
+    for (final w in allWeights) {
+      final dateStr = '${w.date.year}-${w.date.month.toString().padLeft(2, '0')}-${w.date.day.toString().padLeft(2, '0')}';
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('weights')
+          .doc(dateStr)
+          .set({
+        'weight': w.weight,
+        'note': w.note,
         'syncedAt': FieldValue.serverTimestamp(),
       });
     }
@@ -209,6 +244,24 @@ class FirebaseHelper {
         .collection('workouts')
         .doc(dateStr)
         .delete();
+  }
+
+  /// Sync a single body weight entry to cloud
+  Future<void> syncSingleWeight(WeightEntry entry) async {
+    final user = currentUser;
+    if (user == null) return;
+
+    final dateStr = '${entry.date.year}-${entry.date.month.toString().padLeft(2, '0')}-${entry.date.day.toString().padLeft(2, '0')}';
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('weights')
+        .doc(dateStr)
+        .set({
+      'weight': entry.weight,
+      'note': entry.note,
+      'syncedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> logout() async {
