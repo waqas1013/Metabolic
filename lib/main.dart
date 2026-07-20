@@ -6,6 +6,7 @@ import 'package:metabolic/theme/app_theme.dart';
 import 'package:metabolic/screens/home_screen.dart';
 import 'package:metabolic/screens/history_screen.dart';
 import 'package:metabolic/screens/trends_screen.dart';
+import 'package:metabolic/screens/reports_screen.dart';
 import 'package:metabolic/screens/login_screen.dart';
 
 void main() async {
@@ -66,10 +67,12 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final _historyKey = GlobalKey<HistoryScreenState>();
   final _trendsKey = GlobalKey<TrendsScreenState>();
+  final _reportsKey = GlobalKey<ReportsScreenState>();
 
   void _onEntrySaved() {
     _historyKey.currentState?.refresh();
     _trendsKey.currentState?.refresh();
+    _reportsKey.currentState?.refresh();
   }
 
   @override
@@ -83,6 +86,7 @@ class _MainNavigationState extends State<MainNavigation> {
             HomeScreen(onEntrySaved: _onEntrySaved),
             HistoryScreen(key: _historyKey),
             TrendsScreen(key: _trendsKey),
+            ReportsScreen(key: _reportsKey),
           ],
         ),
         bottomNavigationBar: Container(
@@ -96,14 +100,17 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
           ),
           child: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
             currentIndex: _currentIndex,
             onTap: (index) {
               setState(() => _currentIndex = index);
-              // Refresh data when switching to History or Trends
+              // Refresh data when switching tabs
               if (index == 1) {
                 _historyKey.currentState?.refresh();
               } else if (index == 2) {
                 _trendsKey.currentState?.refresh();
+              } else if (index == 3) {
+                _reportsKey.currentState?.refresh();
               }
             },
             items: const [
@@ -121,6 +128,11 @@ class _MainNavigationState extends State<MainNavigation> {
                 icon: Icon(Icons.show_chart),
                 activeIcon: Icon(Icons.show_chart),
                 label: 'Trends',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.description),
+                activeIcon: Icon(Icons.description),
+                label: 'Report',
               ),
             ],
           ),
